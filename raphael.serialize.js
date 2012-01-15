@@ -8,13 +8,13 @@
  */
 
 Raphael.fn.serialize = {
-  paper: this,
-
-  json: function() {
+  json: function(extraData) {
+    var paper = this;
     var svgdata = [];
 
     for(var node = paper.bottom; node != null; node = node.next) {
       if (node && node.type) {
+
         switch(node.type) {
           case "image":
             var object = {
@@ -25,7 +25,7 @@ Raphael.fn.serialize = {
               y: node.attrs['y'],
               src: node.attrs['src'],
               transform: node.transformations ? node.transformations.join(' ') : ''
-            }
+            };
             break;
           case "ellipse":
             var object = {
@@ -37,7 +37,7 @@ Raphael.fn.serialize = {
               stroke: node.attrs['stroke'] === 0 ? 'none': node.attrs['stroke'],
               'stroke-width': node.attrs['stroke-width'],
               fill: node.attrs['fill']
-            }
+            };
             break;
           case "rect":
             var object = {
@@ -49,7 +49,7 @@ Raphael.fn.serialize = {
               stroke: node.attrs['stroke'] === 0 ? 'none': node.attrs['stroke'],
               'stroke-width': node.attrs['stroke-width'],
               fill: node.attrs['fill']
-            }
+            };
             break;
           case "text":
             var object = {
@@ -64,49 +64,43 @@ Raphael.fn.serialize = {
               y: node.attrs['y'],
               text: node.attrs['text'],
               'text-anchor': node.attrs['text-anchor']
-            }
+            };
             break;
 
           case "path":
-            var path = "";
-
-            if(node.attrs['path'].constructor != Array){
-              path += node.attrs['path'];
+            
+            // f*cking crutches special for new version of RaphaelJS
+            var transNode = node[0].attributes.getNamedItem('transform'), 
+                pathNode = node[0].attributes.getNamedItem('d');
+                
+            if (!pathNode) {
+                continue;
             }
-            else{
-              $.each(node.attrs['path'], function(i, group) {
-                $.each(group,
-                  function(index, value) {
-                    if (index < 1) {
-                        path += value;
-                    } else {
-                      if (index == (group.length - 1)) {
-                        path += value;
-                      } else {
-                       path += value + ',';
-                      }
-                    }
-                  });
-              });
-            }
-
+            
             var object = {
-              type: node.type,
-              fill: node.attrs['fill'],
-              opacity: node.attrs['opacity'],
-              translation: node.attrs['translation'],
-              scale: node.attrs['scale'],
-              path: path,
-              stroke: node.attrs['stroke'] === 0 ? 'none': node.attrs['stroke'],
-              'stroke-width': node.attrs['stroke-width'],
-              transform: node.transformations ? node.transformations.join(' ') : ''
-            }
+                  type: node.type,
+                  fill: node.attrs['fill'],
+                  opacity: node.attrs['opacity'],
+                  translation: node.attrs['translation'],
+                  scale: node.attrs['scale'],
+                  path: pathNode.nodeValue,
+                  stroke: node.attrs['stroke'] === 0 ? 'none': node.attrs['stroke'],
+                  'stroke-width': node.attrs['stroke-width'],
+                  transform: transNode ? transNode.nodeValue : ''
+                };
+            break;
+            
+            default: continue;
         }
 
         if (object) {
           svgdata.push(object);
         }
       }
+    }
+
+    if (extraData && Object.prototype.toString.call(extraData) === '[object Array]') {
+        svgdata = svgdata.concat(extraData);
     }
 
     return(JSON.stringify(svgdata));
